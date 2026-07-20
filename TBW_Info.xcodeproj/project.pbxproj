@@ -6,19 +6,21 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		7704C34D300E7CA600E62BEE /* smartctl in Resources */ = {isa = PBXBuildFile; fileRef = 7704C34B300E7CA600E62BEE /* smartctl */; };
+		7704C34E300E7CA600E62BEE /* smartctl in Resources */ = {isa = PBXBuildFile; fileRef = 7704C349300E7CA600E62BEE /* smartctl */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		7704C302300E1D8F00E62BEE /* TBW_Info.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TBW_Info.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7704C349300E7CA600E62BEE /* smartctl */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; path = smartctl; sourceTree = "<group>"; };
+		7704C34B300E7CA600E62BEE /* smartctl */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; path = smartctl; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		7704C304300E1D8F00E62BEE /* TBW_Info */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = TBW_Info;
-			sourceTree = "<group>";
-		};
-		7704C323300E2A6A00E62BEE /* smartctl_binaries */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = smartctl_binaries;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -37,8 +39,9 @@
 		7704C2F9300E1D8F00E62BEE = {
 			isa = PBXGroup;
 			children = (
-				7704C323300E2A6A00E62BEE /* smartctl_binaries */,
 				7704C304300E1D8F00E62BEE /* TBW_Info */,
+				7704C34A300E7CA600E62BEE /* arm64 */,
+				7704C34C300E7CA600E62BEE /* universal */,
 				7704C303300E1D8F00E62BEE /* Products */,
 			);
 			sourceTree = "<group>";
@@ -49,6 +52,22 @@
 				7704C302300E1D8F00E62BEE /* TBW_Info.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		7704C34A300E7CA600E62BEE /* arm64 */ = {
+			isa = PBXGroup;
+			children = (
+				7704C349300E7CA600E62BEE /* smartctl */,
+			);
+			path = arm64;
+			sourceTree = "<group>";
+		};
+		7704C34C300E7CA600E62BEE /* universal */ = {
+			isa = PBXGroup;
+			children = (
+				7704C34B300E7CA600E62BEE /* smartctl */,
+			);
+			path = universal;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -69,7 +88,6 @@
 			);
 			fileSystemSynchronizedGroups = (
 				7704C304300E1D8F00E62BEE /* TBW_Info */,
-				7704C323300E2A6A00E62BEE /* smartctl_binaries */,
 			);
 			name = TBW_Info;
 			packageProductDependencies = (
@@ -99,6 +117,7 @@
 			knownRegions = (
 				en,
 				Base,
+				ru,
 			);
 			mainGroup = 7704C2F9300E1D8F00E62BEE;
 			minimizedProjectReferenceProxies = 1;
@@ -117,6 +136,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7704C34D300E7CA600E62BEE /* smartctl in Resources */,
+				7704C34E300E7CA600E62BEE /* smartctl in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -214,6 +235,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
@@ -271,6 +293,7 @@
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 			};
 			name = Release;
 		};

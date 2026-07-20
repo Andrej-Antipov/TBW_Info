@@ -33,7 +33,7 @@ class DiskMonitor: ObservableObject {
         let savedDisk = UserDefaults.standard.string(forKey: "TargetDisk") ?? "disk0"
         self.targetDisk = savedDisk
         
-        // Быстро сканируем диски в фоне, чтобы не тормозить запуск приложения
+        // сканируем диски в фоне, чтобы не тормозить запуск приложения
         detectAvailableDisks()
         
         setupInitialStats()
@@ -167,7 +167,7 @@ class DiskMonitor: ObservableObject {
         }
     }
     
-    // ИСПРАВЛЕНИЕ: Перенесли весь вызов diskutil строго в фоновый поток (background), чтобы убрать тормоза интерфейса!
+    // весь вызов diskutil строго в фоновый поток (background), чтобы убрать тормоза интерфейса!
     func detectAvailableDisks() {
         DispatchQueue.global(qos: .userInitiated).async {
             let task = Process()
@@ -209,7 +209,7 @@ class DiskMonitor: ObservableObject {
         }
     }
     
-    // ИСПРАВЛЕНИЕ: Переписан парсер iostat. Теперь он четко изолирует переданный targetDisk
+    // парсер iostat. изолирует переданный targetDisk
     private func fetchDeviceWrittenBytes() -> UInt64? {
         let task = Process()
         let pipe = Pipe()

@@ -16,7 +16,7 @@ struct GraphPopoverView: View {
                         Text("Активность записи")
                             .font(.headline)
                         
-                        // ИСПРАВЛЕНИЕ: Яркий, моноширинный бейдж с именем текущего диска
+                        // Яркий, моноширинный бейдж с именем текущего диска
                         Text("[\(monitor.targetDisk)]")
                             .font(.system(.headline, design: .monospaced))
                             .foregroundColor(.orange)
@@ -112,7 +112,7 @@ struct GraphPopoverView: View {
                         .font(.system(.subheadline, design: .monospaced)).bold()
                 }
                 
-                // Строка 4: Общий пожизненный износ
+                // Строка 4: Общий износ
                 HStack(spacing: 8) {
                     Image(systemName: "bolt.shield.fill")
                         .foregroundColor(.orange)
@@ -121,7 +121,7 @@ struct GraphPopoverView: View {
                         .fontWeight(.semibold)
                     Spacer()
                     
-                    // ИСПРАВЛЕНИЕ: Умное дополнение подписи, если накопитель внешний или флешка без SMART
+                    // дополнение подписи, если накопитель внешний или флешка без SMART
                     if monitor.lifetimeTBW == "Не поддерживается" {
                         Text("(USB / Flash)")
                             .font(.caption)

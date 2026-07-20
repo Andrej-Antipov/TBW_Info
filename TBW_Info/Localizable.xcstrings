@@ -1,0 +1,302 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "(USB / Flash)" : {
+
+    },
+    "[%@]" : {
+
+    },
+    "menu_info_item" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Info..."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Инфо..."
+          }
+        }
+      }
+    },
+    "SSD Watch" : {
+
+    },
+    "ui_info_tab" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Info"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Инфо"
+          }
+        }
+      }
+    },
+    "Активность записи" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Write Activity"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Активность записи"
+          }
+        }
+      }
+    },
+    "Версия 1.0.0 (Swift Native)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version 1.0.0 (Swift Native)"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Версия 1.0.0 (Swift Native)"
+          }
+        }
+      }
+    },
+    "Время" : {
+
+    },
+    "Выбор накопителя" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select Drive"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выбор накопителя"
+          }
+        }
+      }
+    },
+    "Выйти из программы" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quit Application"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Выйти из программы"
+          }
+        }
+      }
+    },
+    "Готово" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Готово"
+          }
+        }
+      }
+    },
+    "Закрыть" : {
+
+    },
+    "Закрыть приложение" : {
+
+    },
+    "Записано за текущую сессию:" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Written during this session:"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Записано за текущую сессию:"
+          }
+        }
+      }
+    },
+    "Записано с момента подключения диска:" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Written since drive connection:"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Записано с момента подключения диска:"
+          }
+        }
+      }
+    },
+    "Запускать при старте системы" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Launch at System Startup"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Запускать при старте системы"
+          }
+        }
+      }
+    },
+    "Легковесная утилита для посекундного мониторинга активности записи и контроля общего износа (Lifetime TBW) ваших накопителей." : {
+
+    },
+    "Легковесная утилита..." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A lightweight utility for write monitoring..."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Легковесная утилита..."
+          }
+        }
+      }
+    },
+    "Мониторинг SSD Watch" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SSD Watch Monitoring"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Мониторинг SSD Watch"
+          }
+        }
+      }
+    },
+    "О программе" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "О программе"
+          }
+        }
+      }
+    },
+    "Общий износ SSD (Lifetime TBW):" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total SSD Wear (Lifetime TBW):"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Общий износ SSD (Lifetime TBW):"
+          }
+        }
+      }
+    },
+    "Скорость (МБ/с)" : {
+
+    },
+    "Скорость обновления: 1 раз в секунду" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Update rate: 1 time per second"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Скорость обновления: 1 раз в секунду"
+          }
+        }
+      }
+    },
+    "Текущая скорость записи:" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current Write Speed:"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Текущая скорость записи:"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.2"
+}

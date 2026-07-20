@@ -31,7 +31,7 @@ struct SettingsView: View {
             .padding(.bottom, 10)
         }
         .padding(16)
-        .frame(width: 340, height: 210) // Идеальный квадратный размер карточки Инфо
+        .frame(width: 340, height: 210) // квадратный размер карточки Инфо
     }
 }
 

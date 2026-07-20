@@ -14,7 +14,7 @@ struct SSDWatchApp: App {
     }
 }
 
-// Кастомный класс кнопки для строки меню, который разделяет клики штатно на уровне системы
+// Кастомный класс кнопки для строки меню, который разделяет клики на уровне системы
 class SSDStatusBarButton: NSButton {
     var onLeftClick: (() -> Void)?
     var onRightClick: (() -> Void)?
@@ -97,13 +97,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
-    // Сборщик меню (без лишних обнулений и скрытых флагов)
+    // Сборщик меню
     // Динамически пересобираем меню правого клика и делаем его цветным 🎨
     func constructContextMenu() {
         contextMenu.items.removeAll()
         
         // 1. Заголовок приложения
-        let titleItem = NSMenuItem(title: "Мониторинг SSD Watch", action: nil, keyEquivalent: "")
+        let titleItem = NSMenuItem(title: NSLocalizedString("Мониторинг SSD Watch", comment: ""), action: nil, keyEquivalent: "")
         titleItem.isEnabled = false
         if let titleImg = NSImage(systemSymbolName: "waveform.path.ecg", accessibilityDescription: nil) {
             titleImg.isTemplate = false // Выключаем ч/б маску
@@ -114,7 +114,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         contextMenu.addItem(NSMenuItem.separator())
         
         // 2. ПОДМЕНЮ: Выбор накопителя
-        let diskMenuItem = NSMenuItem(title: "Выбор накопителя", action: nil, keyEquivalent: "")
+        let diskMenuItem = NSMenuItem(title: NSLocalizedString("Выбор накопителя", comment: ""), action: nil, keyEquivalent: "")
         if let diskImg = NSImage(systemSymbolName: "internaldrive", accessibilityDescription: nil) {
             diskImg.isTemplate = false
             // Диск сделаем классическим синим/акцентным
@@ -143,7 +143,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         contextMenu.addItem(diskMenuItem)
         
         // 3. СТРОКА: Автозапуск с оранжевой ракетой 🚀
-        let autoStartItem = NSMenuItem(title: "Запускать при старте системы", action: #selector(toggleAutoStartAction(_:)), keyEquivalent: "")
+        let autoStartItem = NSMenuItem(title: NSLocalizedString("Запускать при старте системы", comment: ""), action: #selector(toggleAutoStartAction(_:)), keyEquivalent: "")
         autoStartItem.target = self
         
         // Пытаемся получить нативную ракету (shuttle)
@@ -153,7 +153,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         
         if let finalRocket = rocketImg {
-            finalRocket.isTemplate = false // КРИТИЧЕСКИ ВАЖНО: Разрешаем цвет!
+            finalRocket.isTemplate = false // Разрешаем цвет!
             // Красим ракету в сочный оранжевый градиент/цвет
             autoStartItem.image = finalRocket.withSymbolConfiguration(NSImage.SymbolConfiguration(paletteColors: [.systemOrange]))
         }
@@ -166,7 +166,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         contextMenu.addItem(NSMenuItem.separator())
         
         // 4. СТРОКА: Инфо...
-        let infoItem = NSMenuItem(title: "Инфо...", action: #selector(openSettingsWindow), keyEquivalent: "i")
+        let infoItem = NSMenuItem(
+            title: NSLocalizedString("menu_info_item", comment: ""),
+            action: #selector(openSettingsWindow),
+            keyEquivalent: "i"
+        )
         infoItem.target = self
         if let infoImg = NSImage(systemSymbolName: "info.circle", accessibilityDescription: nil) {
             infoImg.isTemplate = false
@@ -177,8 +181,44 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         contextMenu.addItem(NSMenuItem.separator())
         
+        // ПОДМЕНЮ: Выбор языка
+        let langMenuItem = NSMenuItem(title: "Language / Язык", action: nil, keyEquivalent: "")
+        
+        // Для глобуса не нужно отключать isTemplate,
+        // система сама покрасит стандартный монохромный силуэт в выбранный цвет!
+        if let langImg = NSImage(systemSymbolName: "globe", accessibilityDescription: nil) {
+            langMenuItem.image = langImg.withSymbolConfiguration(NSImage.SymbolConfiguration(paletteColors: [.systemCyan]))
+        }
+        
+        let langSubmenu = NSMenu()
+        let ruItem = NSMenuItem(title: "Русский", action: #selector(setLanguageRu), keyEquivalent: "")
+        let enItem = NSMenuItem(title: "English", action: #selector(setLanguageEn), keyEquivalent: "")
+        
+        ruItem.target = self
+        enItem.target = self
+        
+        // ИСПРАВЛЕНИЕ 2: Читаем сохраненный язык как МАССИВ строк [String]
+        let languages = UserDefaults.standard.stringArray(forKey: "AppleLanguages") ?? ["ru"]
+        let currentLang = languages.first ?? "ru"
+        
+        // Выставляем системные галочки (checkmark)
+        if currentLang.hasPrefix("ru") {
+            ruItem.state = .on
+            enItem.state = .off
+        } else {
+            enItem.state = .on
+            ruItem.state = .off
+        }
+        
+        langSubmenu.addItem(ruItem)
+        langSubmenu.addItem(enItem)
+        langMenuItem.submenu = langSubmenu
+        contextMenu.addItem(langMenuItem)
+
+
+        
         // 5. СТРОКА: Выйти (с ярко-красной кнопкой питания) 🔴
-        let quitItem = NSMenuItem(title: "Выйти из программы", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: NSLocalizedString("Выйти из программы", comment: ""), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         if let powerImg = NSImage(systemSymbolName: "power", accessibilityDescription: nil) {
             powerImg.isTemplate = false // Разрешаем цвет!
             // Красим кнопку выхода в предупреждающий нативный красный цвет
@@ -198,6 +238,45 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
     }
+    
+    @objc func setLanguageRu() {
+        // 1. Записываем в системные настройки macOS русский язык по умолчанию
+        UserDefaults.standard.set(["ru"], forKey: "AppleLanguages")
+        UserDefaults.standard.synchronize()
+        
+        // 2. Вызываем мгновенный программный перезапуск приложения
+        relaunchApp()
+    }
+
+    @objc func setLanguageEn() {
+        // 1. Записываем в системные настройки macOS английский язык по умолчанию
+        UserDefaults.standard.set(["en"], forKey: "AppleLanguages")
+        UserDefaults.standard.synchronize()
+        
+        // 2. Вызываем мгновенный программный перезапуск приложения
+        relaunchApp()
+    }
+
+    // МЕТОД ПЕРЕЗАПУСКА ПРИЛОЖЕНИЯ НА MACOS
+    private func relaunchApp() {
+        // Получаем путь к исполняемому файлу текущего запущенного приложения
+        let bundleURL = Bundle.main.bundleURL
+        
+        // Создаем системный фоновый процесс, который откроет наше приложение заново
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        task.arguments = ["-n", bundleURL.path] // Флаг "-n" открывает новый чистый экземпляр программы
+        
+        do {
+            try task.run() // Запускаем копию приложения
+            NSApplication.shared.terminate(nil) // Мгновенно завершаем текущую (старую) копию приложения
+        } catch {
+            print("Ошибка перезапуска приложения: \(error)")
+            // Если что-то пошло не так, просто перерисовываем меню как откат
+            constructContextMenu()
+        }
+    }
+
     
     @objc func toggleAutoStartAction(_ sender: NSMenuItem) {
         if #available(macOS 13.0, *) {
