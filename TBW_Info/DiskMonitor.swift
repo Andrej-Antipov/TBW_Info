@@ -72,14 +72,27 @@ class DiskMonitor: ObservableObject {
         fetchLifetimeTBW()
     }
     
+    // Изменили фоновый запуск: теперь при старте запускается ТОЛЬКО редкий таймер SMART ⏱️
     func startMonitoring() {
-        speedTimer = Timer.scheduledTimer(withTimeInterval: updateInterval, repeats: true) { [weak self] _ in
-            self?.tick()
-        }
         smartTimer = Timer.scheduledTimer(withTimeInterval: 300.0, repeats: true) { [weak self] _ in
             self?.fetchLifetimeTBW()
         }
     }
+    
+    // ДОБАВЛЕНО: Метод принудительного включения секундного опроса iostat
+    func startSpeedMonitoring() {
+        speedTimer?.invalidate() // Страховка от дублирования
+        speedTimer = Timer.scheduledTimer(withTimeInterval: updateInterval, repeats: true) { [weak self] _ in
+            self?.tick()
+        }
+    }
+    
+    // ДОБАВЛЕНО: Метод полной остановки секундного таймера для экономии CPU
+    func stopSpeedMonitoring() {
+        speedTimer?.invalidate()
+        speedTimer = nil
+    }
+
     
     private func resetTimer() {
         speedTimer?.invalidate()
@@ -118,26 +131,21 @@ class DiskMonitor: ObservableObject {
     
     func updateTooltip(deltaMB: Double, totalSessionGB: Double) {
         let lang = LanguageManager.shared
-        let lastPoints = statsHistory.suffix(3)
-        let smoothedSpeed = !lastPoints.isEmpty ? (lastPoints.map { $0.megabytesWritten }.max() ?? 0.0) : deltaMB
-        
-        let formattedSpeed = String(format: "%.1f", smoothedSpeed)
         let formattedTotal = String(format: "%.2f", totalSessionGB)
         
+        // Извлекаем только накопительные текстовые подписи
         let titleText = lang.localizedString(for: "menu_title")
-        let speedLabel = lang.localizedString(for: "ui_current_speed")
         let sessionLabel = lang.localizedString(for: "ui_session_write")
         let tbwLabel = lang.localizedString(for: "ui_lifetime_tbw")
         
-        let speedUnit = lang.currentLanguage == .russian ? "МБ/с" : "MB/s"
-        
+        // Генерируем компактный тултип без строки моментальной скорости записи
         tooltipText = """
         \(titleText) (\(targetDisk))
-        \(speedLabel) \(formattedSpeed) \(speedUnit)
         \(sessionLabel) \(formattedTotal)
         \(tbwLabel) \(lifetimeTBW)
         """
     }
+
     
     func fetchLifetimeTBW() {
           DispatchQueue.global(qos: .background).async {
@@ -221,7 +229,7 @@ class DiskMonitor: ObservableObject {
           }
       }
     
-    // ВОЗВРАТ К СТАБИЛЬНОМУ РАБОЧЕМУ ВАРИАНТУ С ОТОБРАЖЕНИЕМ СЕССИИ И СТАРТА 🚀
+    // Версия Iostat
     private func fetchDeviceWrittenBytes() -> UInt64? {
         let task = Process()
         let pipe = Pipe()
@@ -257,7 +265,7 @@ class DiskMonitor: ObservableObject {
     
         return nil
     }
-
+    
     // Метод On-Demand опроса для вывода расширенного лога SMART в окно
     func loadFullSmartReport() {
         let isRu = LanguageManager.shared.currentLanguage == .russian

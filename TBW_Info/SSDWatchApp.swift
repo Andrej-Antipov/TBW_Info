@@ -14,7 +14,6 @@ struct SSDWatchApp: App {
     }
 }
 
-// Кастомный класс кнопки для строки меню
 class SSDStatusBarButton: NSButton {
     var onLeftClick: (() -> Void)?
     var onRightClick: (() -> Void)?
@@ -62,7 +61,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         customButton.image = NSImage(systemSymbolName: "internaldrive.fill", accessibilityDescription: "SSD Watch")
         customButton.isBordered = false
         
-        // Привязываем штатные действия к кликам
         customButton.onLeftClick = { [weak self] in
             self?.showGraphPopover()
         }
@@ -84,6 +82,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
                 .store(in: &cancellables)
         }
+        // ДОБАВЛЕНО: Следим за открытием и закрытием окна графика
+        NotificationCenter.default.addObserver(self, selector: #selector(popoverWillShow), name: NSPopover.willShowNotification, object: popover)
+        NotificationCenter.default.addObserver(self, selector: #selector(popoverDidClose), name: NSPopover.didCloseNotification, object: popover)
+
     }
     
     // Функция вызова живого графика (левый клик)
@@ -346,6 +348,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
+    @objc func popoverWillShow() {
+        // Окно открывается -> Мгновенно будим таймер iostat, нагрузка 1% только пока смотрим на экран 🏃‍♂️
+        monitor.startSpeedMonitoring()
+    }
+    
+    @objc func popoverDidClose() {
+        // Окно закрылось -> Полностью усыпляем секундный таймер. Нагрузка на CPU падает до 0.0% 💤
+        monitor.stopSpeedMonitoring()
+    }
+
+    
     @objc func openSettingsWindow() {
         if settingsWindow == nil {
             let window = NSWindow(
@@ -368,7 +381,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             )
             self.settingsWindow = window
         }
-        
         settingsWindow?.level = .floating
         settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
