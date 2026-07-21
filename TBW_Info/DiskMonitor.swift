@@ -221,53 +221,40 @@ class DiskMonitor: ObservableObject {
           }
       }
     
-    // ОПРОС КЛЮЧЕЙ ЯДРА MACOS 
+    // ВОЗВРАТ К СТАБИЛЬНОМУ РАБОЧЕМУ ВАРИАНТУ С ОТОБРАЖЕНИЕМ СЕССИИ И СТАРТА 🚀
     private func fetchDeviceWrittenBytes() -> UInt64? {
-        let matchingDict: NSMutableDictionary = IOServiceMatching("IOMedia")
+        let task = Process()
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = Pipe() // Добавлено: Глушим предупреждения 0x5 в консоли
         
-        var iterator: io_iterator_t = 0
-        let result = IOServiceGetMatchingServices(kIOMainPortDefault, matchingDict, &iterator)
+        // Запрашиваем iostat общую статистику в ГБ/МБ для выбранного диска targetDisk
+        task.arguments = ["-d", "-I", self.targetDisk]
+        task.executableURL = URL(fileURLWithPath: "/usr/sbin/iostat")
         
-        guard result == KERN_SUCCESS && iterator != 0 else { return nil }
-        defer { IOObjectRelease(iterator) }
-        
-        var diskService = IOIteratorNext(iterator)
-        while diskService != 0 {
-            defer { IOObjectRelease(diskService) }
+        do {
+            try task.run()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            task.waitUntilExit()
             
-            var properties: Unmanaged<CFMutableDictionary>?
-            let statsResult = IORegistryEntryCreateCFProperties(diskService, &properties, kCFAllocatorDefault, 0)
-            
-            if statsResult == KERN_SUCCESS, let props = properties?.takeRetainedValue() as? [String: Any] {
-                let bsdName = props["BSD Name"] as? String ?? ""
+            if let output = String(data: data, encoding: .utf8) {
+                let lines = output.components(separatedBy: .newlines)
                 
-                if bsdName == self.targetDisk {
-                    // Переходим к родительскому узлу драйвера, где лежит таблица статистики
-                    var parentService: io_registry_entry_t = 0
-                    let parentResult = IORegistryEntryGetParentEntry(diskService, kIOServicePlane, &parentService)
+                // Ищем строку значений (обычно iostat выводит заголовок диска, а под ним строку чисел)
+                for line in lines {
+                    let components = line.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
                     
-                    if parentResult == KERN_SUCCESS && parentService != 0 {
-                        defer { IOObjectRelease(parentService) }
-                        var parentProperties: Unmanaged<CFMutableDictionary>?
-                        let parentStatsResult = IORegistryEntryCreateCFProperties(parentService, &parentProperties, kCFAllocatorDefault, 0)
-                        
-                        if parentStatsResult == KERN_SUCCESS, let parentProps = parentProperties?.takeRetainedValue() as? [String: Any] {
-                            // Читаем таблицу Statistics родительского контроллера
-                            if let stats = parentProps["Statistics"] as? [String: Any] {
-                                // ИСПРАВЛЕНИЕ: Используем точное имя ключа вашей системы "Bytes (Write)"
-                                if let bytesWritten = stats["Bytes (Write)"] as? UInt64 {
-                                    return bytesWritten
-                                }
-                                if let bytesWrittenNum = stats["Bytes (Write)"] as? NSNumber {
-                                    return bytesWrittenNum.uint64Value
-                                }
-                            }
+                    // Защита от парсинга строк-заголовков (в них буквы, а нам нужны только колонки с цифрами)
+                    if components.count >= 3 {
+                        // Последняя колонка в iostat -d -I - это ВСЕГО переданных МБ на устройство
+                        if let totalMB = Double(components.last!), components.allSatisfy({ Double($0) != nil }) {
+                            return UInt64(totalMB * 1024 * 1024)
                         }
                     }
                 }
             }
-            diskService = IOIteratorNext(iterator)
-        }
+        } catch {}
+    
         return nil
     }
 
