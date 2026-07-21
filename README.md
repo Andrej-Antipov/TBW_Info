@@ -1,9 +1,9 @@
-# ⚡️ SSD Watch (macOS Menu Bar Utility)
+# ⚡️ TBU_Info (macOS Menu Bar Utility)
 ---
 
 ## 🇺🇸 English Description
 
-**SSD Watch** is an ultra-lightweight, native macOS system monitor that lives right in your Menu Bar. It provides real-time tracking of your SSD's second-by-second write speeds, cumulative data transfer volume, and overall health (Lifetime TBW). 
+**TBU Info** is an ultra-lightweight, native macOS system monitor that lives right in your Menu Bar. It provides real-time tracking of your SSD's second-by-second write speeds, cumulative data transfer volume, and overall health (Lifetime TBW). 
 
 The app features full **English & Russian localization** using Apple's modern **String Catalog** system with a seamless environment hot-relaunch mechanism.
 
@@ -26,7 +26,7 @@ The app features full **English & Russian localization** using Apple's modern **
 
 ## 🇷🇺 Описание на русском
 
-**SSD Watch** — это ультра-легковесный, нативный системный монитор для строки меню macOS. Приложение обеспечивает посекундный мониторинг реальной скорости записи на диски, ведет точный учет переданного объема данных за сессию и контролирует суммарный пожизненный износ накопителя (Lifetime TBW).
+**TBU Info** — это ультра-легковесный, нативный системный монитор для строки меню macOS. Приложение обеспечивает посекундный мониторинг реальной скорости записи на диски, ведет точный учет переданного объема данных за сессию и контролирует суммарный пожизненный износ накопителя (Lifetime TBW).
 
 Утилита поддерживает **полную русскую и английскую локализацию** на базе современной системы **String Catalog** от Apple с возможностью бесшовного переключения интерфейса на лету.
 
