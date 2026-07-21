@@ -3,28 +3,23 @@ import Charts
 
 struct GraphPopoverView: View {
     @ObservedObject var monitor: DiskMonitor
+    @Environment(\.locale) var locale 
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            // MARK: - Верхняя шапка окна (Добавлено имя диска в заголовок)
+        VStack(alignment: .leading, spacing: 8) {
+            // Шапка окна
             HStack {
                 Image(systemName: "waveform.path.ecg")
-                    .font(.title)
+                    .font(.headline)
                     .foregroundColor(.orange)
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Text("Активность записи")
-                            .font(.headline)
-                        
-                        // Яркий, моноширинный бейдж с именем текущего диска
-                        Text("[\(monitor.targetDisk)]")
-                            .font(.system(.headline, design: .monospaced))
-                            .foregroundColor(.orange)
-                    }
-                    Text("Скорость обновления: 1 раз в секунду")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+                
+                Text("ui_graph_title")
+                    .font(.headline)
+                
+                Text("[\(monitor.targetDisk)]")
+                    .font(.system(.headline, design: .monospaced))
+                    .foregroundColor(.orange)
+                
                 Spacer()
                 
                 Button(action: {
@@ -34,28 +29,33 @@ struct GraphPopoverView: View {
                         .foregroundColor(.red)
                 }
                 .buttonStyle(.plain)
-                .help("Закрыть приложение")
+                .help(NSLocalizedString("menu_quit", comment: ""))
             }
             
+            // Вычисление динамического масштаба для шкалы Y
+            let points = monitor.statsHistory
+            let currentMax = points.map { $0.megabytesWritten }.max() ?? 0.0
+            let yMaxLimit = max(10.0, currentMax * 1.1)
+            
             // Компонент живого графика скорости записи (МБ/с)
-            Chart(monitor.statsHistory) { point in
+            Chart(points) { point in
                 LineMark(
-                    x: .value("Время", point.time),
-                    y: .value("Скорость (МБ/с)", point.megabytesWritten)
+                    x: .value("Time", point.time),
+                    y: .value("Speed", point.megabytesWritten)
                 )
                 .foregroundStyle(Color.orange.gradient)
                 .interpolationMethod(.catmullRom)
                 
                 AreaMark(
-                    x: .value("Время", point.time),
-                    y: .value("Скорость (МБ/с)", point.megabytesWritten)
+                    x: .value("Time", point.time),
+                    y: .value("Speed", point.megabytesWritten)
                 )
                 .foregroundStyle(Color.orange.opacity(0.15).gradient)
                 .interpolationMethod(.catmullRom)
             }
-            .frame(height: 120)
-            .padding(.trailing, 10)
+            .frame(width: 320, height: 80)
             .id(monitor.targetDisk)
+            .chartYScale(domain: 0...yMaxLimit)
             .chartYAxis {
                 AxisMarks(position: .leading)
             }
@@ -67,62 +67,59 @@ struct GraphPopoverView: View {
             
             Divider()
             
-            // Текстовая статистика строчками друг под другом
-            VStack(spacing: 8) {
-                
-                // Строка 1: Текущая скорость
+            // Текстовая статистика
+            VStack(spacing: 5) {
+                // Строка 1: Скорость записи
                 HStack(spacing: 8) {
                     Image(systemName: "gauge.with.needle")
                         .foregroundColor(.secondary)
-                    Text("Текущая скорость записи:")
+                    Text("ui_current_speed") // Нативный ключ
                         .foregroundColor(.secondary)
                     Spacer()
                     
-                    let lastPoints = monitor.statsHistory.suffix(5)
+                    let lastPoints = points.suffix(5)
                     let maxSpeed = !lastPoints.isEmpty ? (lastPoints.map { $0.megabytesWritten }.max() ?? 0.0) : 0.0
                     
-                    Text(String(format: "%.1f МБ/с", maxSpeed))
+                    // Определяем единицу измерения скорости на основе локали окружения
+                    let isRu = locale.identifier.hasPrefix("ru")
+                    let speedUnit = isRu ? "МБ/с" : "MB/s"
+                    
+                    Text(String(format: "%.1f \(speedUnit)", maxSpeed))
                         .font(.system(.subheadline, design: .monospaced)).bold()
                 }
                 
-                // Строка 2: Записано за сессию приложения
+                // Строка 2: За сессию
                 HStack(spacing: 8) {
                     Image(systemName: "hourglass")
                         .foregroundColor(.secondary)
-                    Text("Записано за текущую сессию:")
+                    Text("ui_session_write") // Нативный ключ
                         .foregroundColor(.secondary)
                     Spacer()
-                    
-                    let sessionComponents = monitor.tooltipText.components(separatedBy: "\n")
-                    // ИСПРАВЛЕНИЕ: если в массиве больше 2 элементов, берем строку с индексом [2]
-                    let sessionText = sessionComponents.count > 2 ? sessionComponents[2] : "За сессию: 0.0 ГБ"
-                    Text(sessionText.replacingOccurrences(of: "За сессию: ", with: ""))
+                    Text(monitor.sessionWriteDisplay)
                         .font(.system(.subheadline, design: .monospaced)).bold()
-
                 }
                 
-                // Строка 3: Записано с момента включения Mac
+                // Строка 3: С момента старта
                 HStack(spacing: 8) {
-                    Image(systemName: "macmini")
+                    Image(systemName: "desktopcomputer")
                         .foregroundColor(.secondary)
-                    Text("Записано с момента подключения диска:") // Скорректирован текст для универсальности
+                    Text("ui_boot_write") // Нативный ключ
                         .foregroundColor(.secondary)
                     Spacer()
                     Text(monitor.totalSinceBootDisplay)
                         .font(.system(.subheadline, design: .monospaced)).bold()
                 }
                 
-                // Строка 4: Общий износ
+                // Строка 4: Ресурс (TBW)
                 HStack(spacing: 8) {
                     Image(systemName: "bolt.shield.fill")
                         .foregroundColor(.orange)
-                    Text("Общий износ SSD (Lifetime TBW):")
+                    Text("ui_lifetime_tbw") // Нативный ключ
                         .foregroundColor(.orange)
                         .fontWeight(.semibold)
                     Spacer()
                     
-                    // дополнение подписи, если накопитель внешний или флешка без SMART
-                    if monitor.lifetimeTBW == "Не поддерживается" {
+                    if monitor.targetDisk != "disk0" {
                         Text("(USB / Flash)")
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -137,9 +134,8 @@ struct GraphPopoverView: View {
             .font(.subheadline)
             .padding(.horizontal, 2)
         }
-        .padding()
-        // Оставили ширину 430, чтобы длинные серийники или логи SMART гарантированно влезали
-        .frame(width: 430, height: 320)
+        .padding(10)
+        .frame(width: 360, height: 220)
     }
 }
 

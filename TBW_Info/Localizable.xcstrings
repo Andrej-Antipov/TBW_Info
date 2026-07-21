@@ -24,8 +24,73 @@
         }
       }
     },
+    "menu_quit" : {
+
+    },
+    "Speed" : {
+
+    },
     "SSD Watch" : {
 
+    },
+    "Time" : {
+
+    },
+    "ui_boot_write" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Since Launch:"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "С момента старта:"
+          }
+        }
+      }
+    },
+    "ui_close" : {
+
+    },
+    "ui_current_speed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Write Speed:"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Скорость записи:"
+          }
+        }
+      }
+    },
+    "ui_description" : {
+
+    },
+    "ui_graph_title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Write Activity"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Активность записи"
+          }
+        }
+      }
     },
     "ui_info_tab" : {
       "extractionState" : "manual",
@@ -43,6 +108,60 @@
           }
         }
       }
+    },
+    "ui_lifetime_tbw" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lifetime TBW:"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ресурс (TBW):"
+          }
+        }
+      }
+    },
+    "ui_session_write" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Session:"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "За сессию:"
+          }
+        }
+      }
+    },
+    "ui_smart_report_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " Full S.M.A.R.T. Report"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Полный S.M.A.R.T. отчет"
+          }
+        }
+      }
+    },
+    "ui_version" : {
+
     },
     "Активность записи" : {
       "extractionState" : "manual",
@@ -77,9 +196,6 @@
           }
         }
       }
-    },
-    "Время" : {
-
     },
     "Выбор накопителя" : {
       "extractionState" : "manual",
@@ -132,12 +248,6 @@
         }
       }
     },
-    "Закрыть" : {
-
-    },
-    "Закрыть приложение" : {
-
-    },
     "Записано за текущую сессию:" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -188,9 +298,6 @@
           }
         }
       }
-    },
-    "Легковесная утилита для посекундного мониторинга активности записи и контроля общего износа (Lifetime TBW) ваших накопителей." : {
-
     },
     "Легковесная утилита..." : {
       "extractionState" : "manual",
@@ -259,9 +366,6 @@
           }
         }
       }
-    },
-    "Скорость (МБ/с)" : {
-
     },
     "Скорость обновления: 1 раз в секунду" : {
       "extractionState" : "manual",

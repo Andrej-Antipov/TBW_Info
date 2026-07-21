@@ -14,18 +14,16 @@ struct SSDWatchApp: App {
     }
 }
 
-// Кастомный класс кнопки для строки меню, который разделяет клики на уровне системы
+// Кастомный класс кнопки для строки меню
 class SSDStatusBarButton: NSButton {
     var onLeftClick: (() -> Void)?
     var onRightClick: (() -> Void)?
     
     override func mouseDown(with event: NSEvent) {
-        // Левый клик мыши
         onLeftClick?()
     }
     
     override func rightMouseDown(with event: NSEvent) {
-        // Правый клик мыши
         onRightClick?()
     }
 }
@@ -35,20 +33,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var popover = NSPopover()
     let monitor = DiskMonitor()
     var cancellables = Set<AnyCancellable>()
+    var smartWindow: NSWindow? // Переменная для окна SMART отчета
+
     
     var contextMenu = NSMenu()
     var settingsWindow: NSWindow?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Настройка Popover (окна с графиком)
-        popover.contentSize = NSSize(width: 430, height: 320)
+        popover.contentSize = NSSize(width: 360, height: 220)
         popover.behavior = .transient
-        popover.contentViewController = NSHostingController(rootView: GraphPopoverView(monitor: monitor))
+        
+        // Читаем выбранный язык и внедряем его в окружение SwiftUI графика
+        let languages = UserDefaults.standard.stringArray(forKey: "AppleLanguages") ?? ["ru"]
+        let currentLang = languages.first ?? "ru"
+        
+        popover.contentViewController = NSHostingController(
+            rootView: GraphPopoverView(monitor: monitor)
+                .environment(\.locale, Locale(identifier: currentLang)) // Жестко фиксируем язык для SwiftUI
+        )
+
         
         // Создаем элемент строки меню с фиксированной шириной иконки
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
-        // Вместо стандартной кнопки подставляем наш кастомный класс
+        // Вместо стандартной кнопки кастомный класс
         let customButton = SSDStatusBarButton()
         customButton.image = NSImage(systemSymbolName: "internaldrive.fill", accessibilityDescription: "SSD Watch")
         customButton.isBordered = false
@@ -98,7 +107,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     // Сборщик меню
-    // Динамически пересобираем меню правого клика и делаем его цветным 🎨
+    // Динамически пересобираем меню правого клика
     func constructContextMenu() {
         contextMenu.items.removeAll()
         
@@ -142,11 +151,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         diskMenuItem.submenu = diskSubmenu
         contextMenu.addItem(diskMenuItem)
         
-        // 3. СТРОКА: Автозапуск с оранжевой ракетой 🚀
+        // 3. Автозапуск с оранжевой ракетой 🚀
         let autoStartItem = NSMenuItem(title: NSLocalizedString("Запускать при старте системы", comment: ""), action: #selector(toggleAutoStartAction(_:)), keyEquivalent: "")
         autoStartItem.target = self
         
-        // Пытаемся получить нативную ракету (shuttle)
+        // Получаем нативную ракету (shuttle)
         var rocketImg = NSImage(systemSymbolName: "shuttle", accessibilityDescription: nil)
         if rocketImg == nil {
             rocketImg = NSImage(systemSymbolName: "paperplane.fill", accessibilityDescription: nil)
@@ -164,6 +173,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         contextMenu.addItem(autoStartItem)
         
         contextMenu.addItem(NSMenuItem.separator())
+        
+        // СТРОКА: S.M.A.R.T. отчет...
+        let isRussian = UserDefaults.standard.stringArray(forKey: "AppleLanguages")?.first?.hasPrefix("ru") ?? true
+        
+        let smartReportItem = NSMenuItem(
+            title: isRussian ? "S.M.A.R.T. отчет..." : "S.M.A.R.T. Report...",
+            action: #selector(openSmartReportWindow),
+            keyEquivalent: "s"
+        )
+        smartReportItem.target = self
+        if let docImg = NSImage(systemSymbolName: "doc.plaintext", accessibilityDescription: nil) {
+            docImg.isTemplate = false
+            smartReportItem.image = docImg.withSymbolConfiguration(NSImage.SymbolConfiguration(paletteColors: [.systemOrange]))
+        }
+        contextMenu.addItem(smartReportItem)
+        
+        contextMenu.addItem(NSMenuItem.separator()) // Красивый разделитель перед Инфо
+
+
         
         // 4. СТРОКА: Инфо...
         let infoItem = NSMenuItem(
@@ -197,7 +225,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         ruItem.target = self
         enItem.target = self
         
-        // ИСПРАВЛЕНИЕ 2: Читаем сохраненный язык как МАССИВ строк [String]
+        // Читаем сохраненный язык как МАССИВ строк [String]
         let languages = UserDefaults.standard.stringArray(forKey: "AppleLanguages") ?? ["ru"]
         let currentLang = languages.first ?? "ru"
         
@@ -217,7 +245,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 
         
-        // 5. СТРОКА: Выйти (с ярко-красной кнопкой питания) 🔴
+        // 5. СТРОКА: Выйти
         let quitItem = NSMenuItem(title: NSLocalizedString("Выйти из программы", comment: ""), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         if let powerImg = NSImage(systemSymbolName: "power", accessibilityDescription: nil) {
             powerImg.isTemplate = false // Разрешаем цвет!
@@ -225,6 +253,34 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             quitItem.image = powerImg.withSymbolConfiguration(NSImage.SymbolConfiguration(paletteColors: [.systemRed]))
         }
         contextMenu.addItem(quitItem)
+    }
+    
+    @objc func openSmartReportWindow() {
+        monitor.loadFullSmartReport()
+        
+        // Всегда создаем окно с нуля, чтобы сбросить языковой кэш SwiftUI
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 580, height: 420),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.center()
+        window.title = "S.M.A.R.T. Diagnostics"
+        window.isReleasedWhenClosed = false
+        
+        let languages = UserDefaults.standard.stringArray(forKey: "AppleLanguages") ?? ["ru"]
+        let currentLang = languages.first ?? "ru"
+        
+        window.contentView = NSHostingView(
+            rootView: SmartReportView(monitor: monitor)
+                .environment(\.locale, Locale(identifier: currentLang))
+        )
+        self.smartWindow = window
+        
+        smartWindow?.level = .floating
+        smartWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     @objc func selectDiskAction(_ sender: NSMenuItem) {
@@ -240,22 +296,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @objc func setLanguageRu() {
-        // 1. Записываем в системные настройки macOS русский язык по умолчанию
         UserDefaults.standard.set(["ru"], forKey: "AppleLanguages")
         UserDefaults.standard.synchronize()
-        
-        // 2. Вызываем мгновенный программный перезапуск приложения
         relaunchApp()
     }
 
     @objc func setLanguageEn() {
-        // 1. Записываем в системные настройки macOS английский язык по умолчанию
         UserDefaults.standard.set(["en"], forKey: "AppleLanguages")
         UserDefaults.standard.synchronize()
-        
-        // 2. Вызываем мгновенный программный перезапуск приложения
         relaunchApp()
     }
+
 
     // МЕТОД ПЕРЕЗАПУСКА ПРИЛОЖЕНИЯ НА MACOS
     private func relaunchApp() {
@@ -304,13 +355,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 defer: false
             )
             window.center()
-            window.title = "О программе"
+            window.title = LanguageManager.shared.localizedString(for: "ui_about_title")
             window.isReleasedWhenClosed = false
-            window.contentView = NSHostingView(rootView: SettingsView())
+            
+            //Передаем локаль в окно Инфо
+            let languages = UserDefaults.standard.stringArray(forKey: "AppleLanguages") ?? ["ru"]
+            let currentLang = languages.first ?? "ru"
+            
+            window.contentView = NSHostingView(
+                rootView: SettingsView()
+                    .environment(\.locale, Locale(identifier: currentLang))
+            )
             self.settingsWindow = window
         }
         
-        // Принудительно выводим окно на самый верхний слой
         settingsWindow?.level = .floating
         settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

@@ -11,19 +11,19 @@ struct SettingsView: View {
             Text("SSD Watch")
                 .font(.title3).bold()
             
-            Text("Версия 1.0.0 (Swift Native)")
+            Text("ui_version")
                 .font(.caption)
                 .foregroundColor(.secondary)
             
-            Text("Легковесная утилита для посекундного мониторинга активности записи и контроля общего износа (Lifetime TBW) ваших накопителей.")
+            Text("ui_description")
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
-                .padding(.horizontal, 10)
+                .padding(.horizontal, 14)
             
             Spacer()
             
-            Button("Закрыть") {
+            Button("ui_close") {
                 NSApp.keyWindow?.close()
             }
             .buttonStyle(.borderedProminent)
@@ -31,7 +31,7 @@ struct SettingsView: View {
             .padding(.bottom, 10)
         }
         .padding(16)
-        .frame(width: 340, height: 210) // квадратный размер карточки Инфо
+        .frame(width: 340, height: 210)
     }
 }
 

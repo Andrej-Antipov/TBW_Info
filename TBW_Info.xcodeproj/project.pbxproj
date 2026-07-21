@@ -6,15 +6,8 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		7704C34D300E7CA600E62BEE /* smartctl in Resources */ = {isa = PBXBuildFile; fileRef = 7704C34B300E7CA600E62BEE /* smartctl */; };
-		7704C34E300E7CA600E62BEE /* smartctl in Resources */ = {isa = PBXBuildFile; fileRef = 7704C349300E7CA600E62BEE /* smartctl */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXFileReference section */
 		7704C302300E1D8F00E62BEE /* TBW_Info.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TBW_Info.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		7704C349300E7CA600E62BEE /* smartctl */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; path = smartctl; sourceTree = "<group>"; };
-		7704C34B300E7CA600E62BEE /* smartctl */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; path = smartctl; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -40,8 +33,6 @@
 			isa = PBXGroup;
 			children = (
 				7704C304300E1D8F00E62BEE /* TBW_Info */,
-				7704C34A300E7CA600E62BEE /* arm64 */,
-				7704C34C300E7CA600E62BEE /* universal */,
 				7704C303300E1D8F00E62BEE /* Products */,
 			);
 			sourceTree = "<group>";
@@ -54,22 +45,6 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		7704C34A300E7CA600E62BEE /* arm64 */ = {
-			isa = PBXGroup;
-			children = (
-				7704C349300E7CA600E62BEE /* smartctl */,
-			);
-			path = arm64;
-			sourceTree = "<group>";
-		};
-		7704C34C300E7CA600E62BEE /* universal */ = {
-			isa = PBXGroup;
-			children = (
-				7704C34B300E7CA600E62BEE /* smartctl */,
-			);
-			path = universal;
-			sourceTree = "<group>";
-		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -79,7 +54,6 @@
 			buildPhases = (
 				7704C2FE300E1D8F00E62BEE /* Sources */,
 				7704C2FF300E1D8F00E62BEE /* Frameworks */,
-				7704C31F300E268B00E62BEE /* ShellScript */,
 				7704C300300E1D8F00E62BEE /* Resources */,
 			);
 			buildRules = (
@@ -136,33 +110,10 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7704C34D300E7CA600E62BEE /* smartctl in Resources */,
-				7704C34E300E7CA600E62BEE /* smartctl in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
-
-/* Begin PBXShellScriptBuildPhase section */
-		7704C31F300E268B00E62BEE /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "TARGET_RES_DIR=\"${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}\"\n\n# Временно копируем x86_64 версию для любых архитектур сборки\nCP_SRC=\"${SRCROOT}/smartctl_binaries/universal/smartctl\"\n\nif [ -f \"$CP_SRC\" ]; then\n    cp \"$CP_SRC\" \"$TARGET_RES_DIR/smartctl\"\n    chmod +x \"$TARGET_RES_DIR/smartctl\"\n    echo \"smartctl (x86_64) успешно скопирован\"\nelse\n    echo \"error: Файл smartctl не найден в папке smartctl_binaries/universal/\"\n    exit 1\nfi\n";
-		};
-/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		7704C2FE300E1D8F00E62BEE /* Sources */ = {
@@ -310,6 +261,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -342,6 +294,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
