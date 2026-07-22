@@ -3,7 +3,7 @@ import Charts
 
 struct GraphPopoverView: View {
     @ObservedObject var monitor: DiskMonitor
-    @Environment(\.locale) var locale 
+    @Environment(\.locale) var locale
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -32,13 +32,16 @@ struct GraphPopoverView: View {
                 .help(NSLocalizedString("menu_quit", comment: ""))
             }
             
-            // Вычисление динамического масштаба для шкалы Y
-            let points = monitor.statsHistory
-            let currentMax = points.map { $0.megabytesWritten }.max() ?? 0.0
+            // РЕШЕНИЕ: Берем только последние 60 точек (1 минута),
+            // чтобы фоновый накопленный хвост не ломал ось X
+            let displayedPoints = monitor.statsHistory.suffix(60)
+            
+            // Вычисление динамического масштаба шкалы Y только для видимых точек
+            let currentMax = displayedPoints.map { $0.megabytesWritten }.max() ?? 0.0
             let yMaxLimit = max(10.0, currentMax * 1.1)
             
             // Компонент живого графика скорости записи (МБ/с)
-            Chart(points) { point in
+            Chart(displayedPoints) { point in
                 LineMark(
                     x: .value("Time", point.time),
                     y: .value("Speed", point.megabytesWritten)
@@ -60,7 +63,11 @@ struct GraphPopoverView: View {
                 AxisMarks(position: .leading)
             }
             .chartXAxis {
-                AxisMarks(values: .stride(by: .second, count: 10)) { _ in
+                // РЕШЕНИЕ: Убираем жесткий stride по 10 сек.
+                // Просим систему нарисовать всего 4 метки времени, они никогда не сольются.
+                AxisMarks(values: .automatic(desiredCount: 4)) { _ in
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                        .foregroundStyle(.gray.opacity(0.2))
                     AxisValueLabel(format: .dateTime.minute().second())
                 }
             }
@@ -73,14 +80,14 @@ struct GraphPopoverView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "gauge.with.needle")
                         .foregroundColor(.secondary)
-                    Text("ui_current_speed") // Нативный ключ
+                    Text("ui_current_speed")
                         .foregroundColor(.secondary)
                     Spacer()
                     
-                    let lastPoints = points.suffix(5)
+                    // Расчет по последним точкам
+                    let lastPoints = displayedPoints.suffix(5)
                     let maxSpeed = !lastPoints.isEmpty ? (lastPoints.map { $0.megabytesWritten }.max() ?? 0.0) : 0.0
                     
-                    // Определяем единицу измерения скорости на основе локали окружения
                     let isRu = locale.identifier.hasPrefix("ru")
                     let speedUnit = isRu ? "МБ/с" : "MB/s"
                     
@@ -92,7 +99,7 @@ struct GraphPopoverView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "hourglass")
                         .foregroundColor(.secondary)
-                    Text("ui_session_write") // Нативный ключ
+                    Text("ui_session_write")
                         .foregroundColor(.secondary)
                     Spacer()
                     Text(monitor.sessionWriteDisplay)
@@ -103,7 +110,7 @@ struct GraphPopoverView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "desktopcomputer")
                         .foregroundColor(.secondary)
-                    Text("ui_boot_write") // Нативный ключ
+                    Text("ui_boot_write")
                         .foregroundColor(.secondary)
                     Spacer()
                     Text(monitor.totalSinceBootDisplay)
@@ -114,7 +121,7 @@ struct GraphPopoverView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "bolt.shield.fill")
                         .foregroundColor(.orange)
-                    Text("ui_lifetime_tbw") // Нативный ключ
+                    Text("ui_lifetime_tbw")
                         .foregroundColor(.orange)
                         .fontWeight(.semibold)
                     Spacer()
