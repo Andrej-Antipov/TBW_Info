@@ -1,11 +1,26 @@
 import Foundation
 import Combine
 
-// Структура точки данных для графика
+// Структура точки данных для живого графика общей скорости
 struct DiskPoint: Identifiable {
     let id = UUID()
     let time: Date
     let megabytesWritten: Double
+}
+
+// Структура процесса с точными полями чтения и записи в байтах (как в Stats)
+struct DiskProcess: Identifiable {
+    let id = UUID()
+    let pid: Int
+    let name: String
+    let read: Int
+    let write: Int
+}
+
+// Вспомогательная структура для хранения истории накопительного ввода-вывода (I/O)
+struct ProcessSnapshotBytes {
+    var read: Int
+    var write: Int
 }
 
 class DiskMonitor: ObservableObject {
@@ -17,6 +32,7 @@ class DiskMonitor: ObservableObject {
     @Published var sessionWriteDisplay: String = "0.0 ГБ"
     @Published var availableDisks: [String] = ["disk0"]
     @Published var fullSmartReport: String = ""
+    @Published var topProcesses: [DiskProcess] = [] // ТОП процессов для отображения в поповере
     
     @Published var targetDisk: String {
         didSet {
@@ -27,11 +43,15 @@ class DiskMonitor: ObservableObject {
     
     @Published var updateInterval: Double = 1.0
     
-    // Внутренние таймеры и счетчики байт
+    // Внутренние таймеры и словари истории
     private var speedTimer: Timer?
     private var smartTimer: Timer?
+    private var processTimer: Timer?
     private var lastTotalBytes: UInt64 = 0
     private var initialSessionBytes: UInt64 = 0
+    
+    // Секретный буфер из Stats: хранит прошлые накопительные байты процессов по их PID
+    private var processHistorySnapshot: [Int32: ProcessSnapshotBytes] = [:]
     
     init() {
         let savedDisk = UserDefaults.standard.string(forKey: "TargetDisk") ?? "disk0"
@@ -41,15 +61,13 @@ class DiskMonitor: ObservableObject {
         setupInitialStats()
         startMonitoring()
     }
-    
-    // Первоначальное заполнение графической истории "пустыми" точками
+    // Часть 2
     private func setupInitialStats() {
         statsHistory.removeAll()
         lastTotalBytes = 0
         initialSessionBytes = 0
         lifetimeTBW = LanguageManager.shared.localizedString(for: "ui_loading")
         
-        // Передаем временный блок, так как получение теперь асинхронное
         fetchDeviceWrittenBytesAsync { [weak self] currentBytes in
             guard let self = self else { return }
             
@@ -75,57 +93,67 @@ class DiskMonitor: ObservableObject {
             self.fetchLifetimeTBW()
         }
     }
-    // Фоновый запуск: при старте запускается ТОЛЬКО редкий таймер SMART раз в 5 минут
+    
     func startMonitoring() {
+        smartTimer?.invalidate()
         smartTimer = Timer.scheduledTimer(withTimeInterval: 300.0, repeats: true) { [weak self] _ in
             self?.fetchLifetimeTBW()
         }
     }
     
-    // ИСПРАВЛЕНО: Перед запуском таймера синхронизируем счетчик байт с системой,
-    // чтобы не было ложного "горба" из накопленных за время закрытия окна данных.
+    // ИСПРАВЛЕНО: Сброс истории процессов и зануление буфера iostat исключают "горб" на графике
     func startSpeedMonitoring() {
-        speedTimer?.invalidate() // Страховка от дублирования
+        speedTimer?.invalidate()
+        speedTimer = nil
+        processTimer?.invalidate()
+        processTimer = nil
         
-        fetchDeviceWrittenBytesAsync { [weak self] currentBytes in
-            guard let self = self, let currentBytes = currentBytes else {
-                // Если iostat не ответил, просто запускаем таймер
-                self?.launchSpeedTimer()
-                return
-            }
-            // Актуализируем точку отсчета перед первым тиком
-            self.lastTotalBytes = currentBytes
-            self.launchSpeedTimer()
-        }
-    }
-    
-    // Вспомогательный метод для старта самого таймера
-    private func launchSpeedTimer() {
-        speedTimer = Timer.scheduledTimer(withTimeInterval: updateInterval, repeats: true) { [weak self] _ in
+        topProcesses.removeAll()
+        processHistorySnapshot.removeAll() // Очищаем историю процессов, чтобы не было старых скачков
+        self.lastTotalBytes = 0
+        
+        // 1. Запускаем таймер скорости общей записи (раз в 1.0 секунду)
+        self.speedTimer = Timer.scheduledTimer(withTimeInterval: self.updateInterval, repeats: true) { [weak self] _ in
             self?.tick()
         }
+        
+        // 2. Сразу собираем ТОП процессов по логике Stats
+        self.fetchTopWritingProcesses()
+        
+        // 3. Запускаем таймер обновления процессов (раз в 2.0 секунды, как в Stats для отзывчивости)
+        self.processTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            self?.fetchTopWritingProcesses()
+        }
     }
     
-    // Метод полной остановки секундного таймера для экономии CPU (вызывать при onDisappear окна)
     func stopSpeedMonitoring() {
         speedTimer?.invalidate()
         speedTimer = nil
+        processTimer?.invalidate()
+        processTimer = nil
     }
-
+    
     private func resetTimer() {
         speedTimer?.invalidate()
+        speedTimer = nil
         smartTimer?.invalidate()
+        smartTimer = nil
+        processTimer?.invalidate()
+        processTimer = nil
         setupInitialStats()
         startMonitoring()
     }
-    
+    //Часть 3
     private func tick() {
         fetchDeviceWrittenBytesAsync { [weak self] currentBytes in
             guard let self = self, let currentBytes = currentBytes else { return }
             
-            // Защитная проверка на случай, если это самый первый запуск приложения
-            if self.lastTotalBytes == 0 { self.lastTotalBytes = currentBytes }
-            if self.initialSessionBytes == 0 { self.initialSessionBytes = currentBytes }
+            // Если это первый тик после открытия окна — фиксируем точку отсчета и пропускаем математику
+            if self.lastTotalBytes == 0 {
+                self.lastTotalBytes = currentBytes
+                if self.initialSessionBytes == 0 { self.initialSessionBytes = currentBytes }
+                return
+            }
             
             let deltaBytes = currentBytes >= self.lastTotalBytes ? (currentBytes - self.lastTotalBytes) : 0
             let deltaMB = Double(deltaBytes) / (1024.0 * 1024.0)
@@ -134,7 +162,6 @@ class DiskMonitor: ObservableObject {
             let newPoint = DiskPoint(time: Date(), megabytesWritten: deltaMB)
             self.statsHistory.append(newPoint)
             
-            // Защита от переполнения: на графике всегда ровно 30 точек
             if self.statsHistory.count > 30 {
                 self.statsHistory.removeFirst()
             }
@@ -164,13 +191,11 @@ class DiskMonitor: ObservableObject {
         \(tbwLabel) \(lifetimeTBW)
         """
     }
-
+    
     func fetchLifetimeTBW() {
         DispatchQueue.global(qos: .background).async { [weak self] in
             guard let self = self else { return }
-            
             guard let bundlePath = Bundle.main.path(forResource: "smartctl", ofType: nil) else {
-                // ИСПРАВЛЕНО: Сменили sync на async для полной безопасности потоков
                 DispatchQueue.main.async { self.lifetimeTBW = "Ошибка утилиты" }
                 return
             }
@@ -179,7 +204,6 @@ class DiskMonitor: ObservableObject {
             let pipe = Pipe()
             task.standardOutput = pipe
             task.standardError = Pipe()
-            
             task.arguments = ["-a", self.targetDisk]
             task.executableURL = URL(fileURLWithPath: bundlePath)
             
@@ -196,7 +220,6 @@ class DiskMonitor: ObservableObject {
                                 .trimmingCharacters(in: .whitespacesAndNewlines)
                             
                             DispatchQueue.main.async {
-                                // ИСПРАВЛЕНО: Парсим вывод, оставляя только компактное значение в скобках [например, 12.3 TB]
                                 if let bracketRange = clean.range(of: "\\[.*\\]", options: .regularExpression) {
                                     self.lifetimeTBW = String(clean[bracketRange])
                                         .replacingOccurrences(of: "[", with: "")
@@ -211,7 +234,6 @@ class DiskMonitor: ObservableObject {
                 }
                 DispatchQueue.main.async { self.lifetimeTBW = "Не поддерживается" }
             } catch {
-                // ИСПРАВЛЕНО: Сменили sync на async, чтобы избежать зависаний приложения
                 DispatchQueue.main.async { self.lifetimeTBW = "Ошибка" }
             }
         }
@@ -220,7 +242,6 @@ class DiskMonitor: ObservableObject {
     func detectAvailableDisks() {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
-            
             let task = Process()
             let pipe = Pipe()
             task.standardOutput = pipe
@@ -248,7 +269,6 @@ class DiskMonitor: ObservableObject {
                     let finalDisks = discovered.isEmpty ? ["disk0"] : discovered.sorted()
                     DispatchQueue.main.async {
                         self.availableDisks = finalDisks
-                        // Если сохраненный диск пропал (вынули флешку), плавно сбрасываем на первый доступный
                         if !finalDisks.contains(self.targetDisk) {
                             self.targetDisk = finalDisks.first ?? "disk0"
                         }
@@ -259,17 +279,13 @@ class DiskMonitor: ObservableObject {
             }
         }
     }
-    // ИСПРАВЛЕНО: Полностью асинхронный метод запуска iostat в фоновом потоке.
-    // Интерфейс больше не замирает и не дергается раз в секунду.
     private func fetchDeviceWrittenBytesAsync(completion: @escaping (UInt64?) -> Void) {
-        let disk = self.targetDisk // Фиксируем имя диска для безопасного использования в фоне
-        
+        let disk = self.targetDisk
         DispatchQueue.global(qos: .userInitiated).async {
             let task = Process()
             let pipe = Pipe()
             task.standardOutput = pipe
-            task.standardError = Pipe() // Глушим системные предупреждения 0x5 в консоли
-            
+            task.standardError = Pipe()
             task.arguments = ["-d", "-I", disk]
             task.executableURL = URL(fileURLWithPath: "/usr/sbin/iostat")
             
@@ -280,15 +296,11 @@ class DiskMonitor: ObservableObject {
                 
                 if let output = String(data: data, encoding: .utf8) {
                     let lines = output.components(separatedBy: .newlines)
-                    
                     for line in lines {
                         let components = line.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
-                        
-                        // Защита от парсинга строк-заголовков (проверяем, что в колонках только числа)
                         if components.count >= 3 {
                             if let totalMB = Double(components.last!), components.allSatisfy({ Double($0) != nil }) {
                                 let bytes = UInt64(totalMB * 1024 * 1024)
-                                // Возвращаем результат строго в главный поток
                                 DispatchQueue.main.async { completion(bytes) }
                                 return
                             }
@@ -296,17 +308,113 @@ class DiskMonitor: ObservableObject {
                     }
                 }
             } catch {}
-            
-            // В случае любой ошибки безопасно возвращаем nil в главный поток
             DispatchQueue.main.async { completion(nil) }
         }
     }
     
-    // Метод On-Demand опроса для вывода расширенного лога SMART в окно диагностики
+    // СЕКРЕТНЫЙ МЕТОД ИЗ STATS: Сбор активных PID через ps и точечный опрос ядра proc_pid_rusage
+    func fetchTopWritingProcesses() {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            
+            let task = Process()
+            let pipe = Pipe()
+            task.standardOutput = pipe
+            task.standardError = Pipe()
+            
+            // Вызываем команду ps для получения списка PID всех активных в данный момент процессов
+            task.arguments = ["-Aceo", "pid,comm", "-r"]
+            task.executableURL = URL(fileURLWithPath: "/bin/ps")
+            
+            do {
+                try task.run()
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                task.waitUntilExit()
+                
+                guard let output = String(data: data, encoding: .utf8) else { return }
+                
+                var snapshot = self.processHistorySnapshot
+                var currentProcesses: [DiskProcess] = []
+                
+                let lines = output.components(separatedBy: .newlines)
+                
+                for line in lines {
+                    let str = line.trimmingCharacters(in: .whitespaces)
+                    let components = str.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
+                    
+                    // Убеждаемся, что строка содержит PID и имя команды (минимум 2 компонента)
+                    if components.count >= 2, let pidInt = Int32(components[0]) {
+                        let pid = pidInt
+                        let fullPath = components[1...].joined(separator: " ")
+                        let name = URL(fileURLWithPath: fullPath).lastPathComponent
+                        
+                        // Делаем точечный легальный запрос к rusage_info для этого PID
+                        var usage = rusage_info_v3()
+                        let rusageResult = withUnsafeMutablePointer(to: &usage) { rusagePtr in
+                            rusagePtr.withMemoryRebound(to: rusage_info_t?.self, capacity: 1) { infoPtr in
+                                proc_pid_rusage(pid, RUSAGE_INFO_V3, infoPtr)
+                            }
+                        }
+                        
+                        // Если ядро успешно вернуло данные для этого конкретного процесса
+                        if rusageResult != -1 {
+                            let bytesRead = Int(usage.ri_diskio_bytesread)
+                            let bytesWritten = Int(usage.ri_diskio_byteswritten)
+                            
+                            // Если процесса еще не было в нашем словаре — инициализируем его текущими байтами
+                            if snapshot[pid] == nil {
+                                snapshot[pid] = ProcessSnapshotBytes(read: bytesRead, write: bytesWritten)
+                            }
+                            
+                            if let history = snapshot[pid] {
+                                // Вычисляем чистую скорость (дельту) за прошедший интервал таймера
+                                let readDelta = bytesRead - history.read
+                                let writeDelta = bytesWritten - history.write
+                                
+                                // Отсекаем системный шум и фоновые оболочки, берем процессы с реальной активностью
+                                if writeDelta > 0 && name != "kernel_task" && name != "TBW_Info" && name != "zsh" && name != "sh" {
+                                    currentProcesses.append(DiskProcess(pid: Int(pid), name: name, read: readDelta, write: writeDelta))
+                                }
+                            }
+                            
+                            // Обновляем исторический буфер новыми накопительными значениями
+                            snapshot[pid]?.read = bytesRead
+                            snapshot[pid]?.write = bytesWritten
+                        }
+                    }
+                }
+                
+                // Сохраняем обновленный снапшот истории
+                self.processHistorySnapshot = snapshot
+                
+                // Схлопываем многопоточные процессы с одинаковыми именами, суммируя их запись
+                var combined: [String: DiskProcess] = [:]
+                for p in currentProcesses {
+                    if let existing = combined[p.name] {
+                        combined[p.name] = DiskProcess(pid: p.pid, name: p.name, read: existing.read + p.read, write: existing.write + p.write)
+                    } else {
+                        combined[p.name] = p
+                    }
+                }
+                
+                // Сортируем по убыванию чистой скорости записи (пишем в байтах, сортируем по write)
+                let sortedTop = combined.values.sorted { $0.write > $1.write }.prefix(3)
+                
+                DispatchQueue.main.async {
+                    // Обновляем UI массив только если лидеры реально изменились, защищая график от микро-рывков
+                    if self.topProcesses.map({ $0.name }) != sortedTop.map({ $0.name }) || self.topProcesses.isEmpty {
+                        self.topProcesses = Array(sortedTop)
+                    }
+                }
+            } catch {
+                print("Ошибка сбора процессов по методу Stats: \(error)")
+            }
+        }
+    }
+    
     func loadFullSmartReport() {
         let isRu = LanguageManager.shared.currentLanguage == .russian
         self.fullSmartReport = isRu ? "Чтение расширенных данных из NVMe контроллера..." : "Reading extended data from NVMe controller..."
-        
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             guard let bundlePath = Bundle.main.path(forResource: "smartctl", ofType: nil) else { return }
@@ -314,7 +422,7 @@ class DiskMonitor: ObservableObject {
             let task = Process()
             let pipe = Pipe()
             task.standardOutput = pipe
-            task.standardError = Pipe() // Глушим системные ошибки 0x5
+            task.standardError = Pipe()
             task.arguments = ["-a", self.targetDisk]
             task.executableURL = URL(fileURLWithPath: bundlePath)
             
@@ -322,7 +430,6 @@ class DiskMonitor: ObservableObject {
                 try task.run()
                 let data = pipe.fileHandleForReading.readDataToEndOfFile()
                 task.waitUntilExit()
-                
                 if let output = String(data: data, encoding: .utf8) {
                     DispatchQueue.main.async { self.fullSmartReport = output }
                 }

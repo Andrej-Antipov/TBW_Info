@@ -7,6 +7,19 @@
     "[%@]" : {
 
     },
+    "%lld %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@"
+          }
+        }
+      }
+    },
+    "Analyzing activity..." : {
+
+    },
     "menu_info_item" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -163,6 +176,9 @@
     "ui_version" : {
 
     },
+    "Write Speed (Top Processes):" : {
+
+    },
     "Активность записи" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -179,6 +195,9 @@
           }
         }
       }
+    },
+    "Анализ активности..." : {
+
     },
     "Версия 1.0.0 (Swift Native)" : {
       "extractionState" : "manual",
@@ -366,6 +385,9 @@
           }
         }
       }
+    },
+    "Скорость записи (ТОП процессов):" : {
+
     },
     "Скорость обновления: 1 раз в секунду" : {
       "extractionState" : "manual",

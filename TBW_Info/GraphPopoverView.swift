@@ -7,7 +7,7 @@ struct GraphPopoverView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Шапка окна
+            // Раздел 1: Шапка окна
             HStack {
                 Image(systemName: "waveform.path.ecg")
                     .font(.headline)
@@ -32,15 +32,12 @@ struct GraphPopoverView: View {
                 .help(NSLocalizedString("menu_quit", comment: ""))
             }
             
-            // РЕШЕНИЕ: Берем только последние 60 точек (1 минута),
-            // чтобы фоновый накопленный хвост не ломал ось X
-            let displayedPoints = monitor.statsHistory.suffix(60)
-            
-            // Вычисление динамического масштаба шкалы Y только для видимых точек
+            // Расчет шкалы Y на основе текущей секундной истории (30 секунд)
+            let displayedPoints = monitor.statsHistory
             let currentMax = displayedPoints.map { $0.megabytesWritten }.max() ?? 0.0
             let yMaxLimit = max(10.0, currentMax * 1.1)
             
-            // Компонент живого графика скорости записи (МБ/с)
+            // Раздел 2: Живой график скорости записи (МБ/с)
             Chart(displayedPoints) { point in
                 LineMark(
                     x: .value("Time", point.time),
@@ -63,8 +60,7 @@ struct GraphPopoverView: View {
                 AxisMarks(position: .leading)
             }
             .chartXAxis {
-                // РЕШЕНИЕ: Убираем жесткий stride по 10 сек.
-                // Просим систему нарисовать всего 4 метки времени, они никогда не сольются.
+                // Автоматическое распределение меток времени, исключающее слияние в полосу
                 AxisMarks(values: .automatic(desiredCount: 4)) { _ in
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
                         .foregroundStyle(.gray.opacity(0.2))
@@ -72,11 +68,11 @@ struct GraphPopoverView: View {
                 }
             }
             
-            Divider()
+            Divider() // Первый разделитель: между графиком и текстовой статистикой
             
-            // Текстовая статистика
+            // Раздел 3: Накопительная текстовая статистика
             VStack(spacing: 5) {
-                // Строка 1: Скорость записи
+                // Строка 1: Текущая скорость записи
                 HStack(spacing: 8) {
                     Image(systemName: "gauge.with.needle")
                         .foregroundColor(.secondary)
@@ -84,7 +80,6 @@ struct GraphPopoverView: View {
                         .foregroundColor(.secondary)
                     Spacer()
                     
-                    // Расчет по последним точкам
                     let lastPoints = displayedPoints.suffix(5)
                     let maxSpeed = !lastPoints.isEmpty ? (lastPoints.map { $0.megabytesWritten }.max() ?? 0.0) : 0.0
                     
@@ -95,7 +90,7 @@ struct GraphPopoverView: View {
                         .font(.system(.subheadline, design: .monospaced)).bold()
                 }
                 
-                // Строка 2: За сессию
+                // Строка 2: За текущую сессию
                 HStack(spacing: 8) {
                     Image(systemName: "hourglass")
                         .foregroundColor(.secondary)
@@ -106,7 +101,7 @@ struct GraphPopoverView: View {
                         .font(.system(.subheadline, design: .monospaced)).bold()
                 }
                 
-                // Строка 3: С момента старта
+                // Строка 3: С момента загрузки macOS
                 HStack(spacing: 8) {
                     Image(systemName: "desktopcomputer")
                         .foregroundColor(.secondary)
@@ -117,7 +112,7 @@ struct GraphPopoverView: View {
                         .font(.system(.subheadline, design: .monospaced)).bold()
                 }
                 
-                // Строка 4: Ресурс (TBW)
+                // Строка 4: Общий ресурс накопителя (TBW)
                 HStack(spacing: 8) {
                     Image(systemName: "bolt.shield.fill")
                         .foregroundColor(.orange)
@@ -140,9 +135,85 @@ struct GraphPopoverView: View {
             }
             .font(.subheadline)
             .padding(.horizontal, 2)
+            
+            Divider() // Второй разделитель: между статистикой и списком процессов
+            
+            // Раздел 4: Список самых активных приложений (ТОП-3) по логике Stats
+            VStack(alignment: .leading, spacing: 4) {
+                Text(locale.identifier.hasPrefix("ru") ? "Скорость записи (ТОП процессов):" : "Write Speed (Top Processes):")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .bold()
+                    .padding(.bottom, 2)
+                
+                if monitor.topProcesses.isEmpty {
+                    HStack {
+                        Text(locale.identifier.hasPrefix("ru") ? "Анализ активности..." : "Analyzing activity...")
+                            .font(.caption.monospaced())
+                            .foregroundColor(.gray)
+                        Spacer()
+                    }
+                    .frame(height: 50) // Резервируем высоту, чтобы поповер не прыгал
+                } else {
+                    VStack(spacing: 4) {
+                        ForEach(monitor.topProcesses) { item in
+                            HStack(spacing: 6) {
+                                Image(systemName: "terminal")
+                                    .font(.caption)
+                                    .foregroundColor(.orange.opacity(0.8))
+                                    .frame(width: 14)
+                                
+                                // Фиксируем ширину под название процесса, убирая микро-сдвиги
+                                Text(item.name)
+                                    .font(.system(.caption, design: .monospaced))
+                                    .lineLimit(1)
+                                    .frame(width: 170, alignment: .leading)
+                                
+                                Spacer()
+                                
+                                // Конвертер байт в КБ/с или МБ/с в реальном времени
+                                let isRu = locale.identifier.hasPrefix("ru")
+                                let bytes = item.write // Скорость записи в байтах за интервал
+                                
+                                if bytes >= 1024 * 1024 * 1024 {
+                                    let gb = Double(bytes) / (1024.0 * 1024.0 * 1024.0)
+                                    Text(String(format: "%.1f \(isRu ? "ГБ/с" : "GB/s")", gb))
+                                        .font(.system(.caption, design: .monospaced)).bold()
+                                        .frame(width: 75, alignment: .trailing)
+                                } else if bytes >= 1024 * 1024 {
+                                    let mb = Double(bytes) / (1024.0 * 1024.0)
+                                    Text(String(format: "%.1f \(isRu ? "МБ/с" : "MB/s")", mb))
+                                        .font(.system(.caption, design: .monospaced)).bold()
+                                        .frame(width: 75, alignment: .trailing)
+                                } else if bytes >= 1024 {
+                                    let kb = Double(bytes) / 1024.0
+                                    Text(String(format: "%.1f \(isRu ? "КБ/с" : "KB/s")", kb))
+                                        .font(.system(.caption, design: .monospaced)).bold()
+                                        .frame(width: 75, alignment: .trailing)
+                                } else {
+                                    Text("\(bytes) \(isRu ? "Б/с" : "B/s")")
+                                        .font(.system(.caption, design: .monospaced)).bold()
+                                        .frame(width: 75, alignment: .trailing)
+                                }
+                            }
+                        }
+                    }
+                    .frame(height: 50, alignment: .top) // Фиксируем общую высоту контейнера ТОП-3
+                }
+            }
+            .padding(.horizontal, 2)
         }
         .padding(10)
-        .frame(width: 360, height: 220)
+        // Высота зафиксирована на 310 пикселях для идеального баланса геометрии
+        .frame(width: 360, height: 310)
+        .onAppear {
+            // Включаем секундный опрос скорости и фоновый поиск процессов при открытии окна
+            monitor.startSpeedMonitoring()
+        }
+        .onDisappear {
+            // Полностью тушим все секундные таймеры при закрытии окна для экономии ресурсов
+            monitor.stopSpeedMonitoring()
+        }
     }
 }
 
