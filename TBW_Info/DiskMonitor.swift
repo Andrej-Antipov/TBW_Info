@@ -82,9 +82,25 @@ class DiskMonitor: ObservableObject {
         }
     }
     
-    // Метод принудительного включения секундного опроса iostat (вызывать при onAppear окна)
+    // ИСПРАВЛЕНО: Перед запуском таймера синхронизируем счетчик байт с системой,
+    // чтобы не было ложного "горба" из накопленных за время закрытия окна данных.
     func startSpeedMonitoring() {
         speedTimer?.invalidate() // Страховка от дублирования
+        
+        fetchDeviceWrittenBytesAsync { [weak self] currentBytes in
+            guard let self = self, let currentBytes = currentBytes else {
+                // Если iostat не ответил, просто запускаем таймер
+                self?.launchSpeedTimer()
+                return
+            }
+            // Актуализируем точку отсчета перед первым тиком
+            self.lastTotalBytes = currentBytes
+            self.launchSpeedTimer()
+        }
+    }
+    
+    // Вспомогательный метод для старта самого таймера
+    private func launchSpeedTimer() {
         speedTimer = Timer.scheduledTimer(withTimeInterval: updateInterval, repeats: true) { [weak self] _ in
             self?.tick()
         }
@@ -104,10 +120,10 @@ class DiskMonitor: ObservableObject {
     }
     
     private func tick() {
-        // ИСПРАВЛЕНО: iostat теперь запрашивается асинхронно в фоне, не блокируя UI поток
         fetchDeviceWrittenBytesAsync { [weak self] currentBytes in
             guard let self = self, let currentBytes = currentBytes else { return }
             
+            // Защитная проверка на случай, если это самый первый запуск приложения
             if self.lastTotalBytes == 0 { self.lastTotalBytes = currentBytes }
             if self.initialSessionBytes == 0 { self.initialSessionBytes = currentBytes }
             
@@ -148,6 +164,7 @@ class DiskMonitor: ObservableObject {
         \(tbwLabel) \(lifetimeTBW)
         """
     }
+
     func fetchLifetimeTBW() {
         DispatchQueue.global(qos: .background).async { [weak self] in
             guard let self = self else { return }
