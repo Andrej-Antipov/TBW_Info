@@ -54,13 +54,43 @@ class DiskMonitor: ObservableObject {
     private var processHistorySnapshot: [Int32: ProcessSnapshotBytes] = [:]
     
     init() {
-        let savedDisk = UserDefaults.standard.string(forKey: "TargetDisk") ?? "disk0"
-        self.targetDisk = savedDisk
+        // Проверяем, есть ли уже сохраненный пользователем диск
+        if let savedDisk = UserDefaults.standard.string(forKey: "TargetDisk") {
+            self.targetDisk = savedDisk
+        } else {
+            // Если это ПЕРВЫЙ запуск — автоматически и нативно находим системный диск
+            let detectedSystemDisk = DiskMonitor.findSystemDisk()
+            self.targetDisk = detectedSystemDisk
+            // Сразу сохраняем его, чтобы зафиксировать первый запуск
+            UserDefaults.standard.set(detectedSystemDisk, forKey: "TargetDisk")
+        }
         
         detectAvailableDisks()
         setupInitialStats()
         startMonitoring()
     }
+    
+    // НОВАЯ НА ТИВНАЯ ФУНКЦИЯ: определяет BSD-имя диска, с которого загружена текущая macOS
+    private static func findSystemDisk() -> String {
+        var stats = statfs()
+        // Опрашиваем корневую директорию системы "/"
+        if statfs("/", &stats) == 0 {
+            // Получаем имя устройства (например, "/dev/disk1s1s1" или "/dev/disk0s2")
+            let cString = withUnsafePointer(to: stats.f_mntfromname) { ptr in
+                return String(cString: UnsafeRawPointer(ptr).assumingMemoryBound(to: CChar.self))
+            }
+            
+            // С помощью регулярного выражения вырезаем чистое базовое имя диска (disk0, disk1 и т.д.)
+            if let range = cString.range(of: "disk[0-9]{1,2}", options: .regularExpression) {
+                return String(cString[range])
+            }
+        }
+        
+        // Резервный вариант на случай непредвиденной ошибки ядра — возвращаем стандартный disk0
+        return "disk0"
+    }
+
+
     // Часть 2
     private func setupInitialStats() {
         statsHistory.removeAll()
@@ -281,11 +311,13 @@ class DiskMonitor: ObservableObject {
     }
     private func fetchDeviceWrittenBytesAsync(completion: @escaping (UInt64?) -> Void) {
         let disk = self.targetDisk
+        
         DispatchQueue.global(qos: .userInitiated).async {
             let task = Process()
             let pipe = Pipe()
             task.standardOutput = pipe
             task.standardError = Pipe()
+            
             task.arguments = ["-d", "-I", disk]
             task.executableURL = URL(fileURLWithPath: "/usr/sbin/iostat")
             
@@ -296,10 +328,17 @@ class DiskMonitor: ObservableObject {
                 
                 if let output = String(data: data, encoding: .utf8) {
                     let lines = output.components(separatedBy: .newlines)
+                    
                     for line in lines {
                         let components = line.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
-                        if components.count >= 3 {
-                            if let totalMB = Double(components.last!), components.allSatisfy({ Double($0) != nil }) {
+                        
+                        // АДАПТИРОВАНО ПОД macOS SEQUOIA: Ищем строку, где ровно 3 числовых элемента.
+                        // Пример: ["20.21", "1115917", "22028.66"] -> (KB/t, xfrs, MB)
+                        // Проверяем, что первая колонка является числом (Double), чтобы гарантированно отсечь заголовки ["KB/t", "xfrs", "MB"]
+                        if components.count == 3, let firstComponent = components.first, Double(firstComponent.replacingOccurrences(of: ",", with: ".")) != nil {
+                            
+                            // Последний (3-й) элемент массива — это общий I/O объем диска в МБ
+                            if let totalMBString = components.last, let totalMB = Double(totalMBString.replacingOccurrences(of: ",", with: ".")) {
                                 let bytes = UInt64(totalMB * 1024 * 1024)
                                 DispatchQueue.main.async { completion(bytes) }
                                 return
@@ -311,8 +350,9 @@ class DiskMonitor: ObservableObject {
             DispatchQueue.main.async { completion(nil) }
         }
     }
-    
-    // СЕКРЕТНЫЙ МЕТОД ИЗ STATS: Сбор активных PID через ps и точечный опрос ядра proc_pid_rusage
+
+
+        // СЕКРЕТНЫЙ МЕТОД ИЗ STATS: Сбор активных PID через ps и точечный опрос ядра proc_pid_rusage
     func fetchTopWritingProcesses() {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }

@@ -8,7 +8,7 @@ struct GraphPopoverView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Раздел 1: Шапка окна
-            HStack {
+            HStack(spacing: 8) {
                 Image(systemName: "waveform.path.ecg")
                     .font(.headline)
                     .foregroundColor(.orange)
@@ -20,8 +20,24 @@ struct GraphPopoverView: View {
                     .font(.system(.headline, design: .monospaced))
                     .foregroundColor(.orange)
                 
-                Spacer()
+                Spacer() // Выталкивает кнопки управления в правый угол
                 
+                // ИСПРАВЛЕНО: Кнопка вызова Мониторинга системы теперь находится слева от кнопки выключения
+                Button(action: {
+                    // Нативно запускаем Activity Monitor по стандартному пути macOS
+                    let path = "/System/Applications/Utilities/Activity Monitor.app"
+                    NSWorkspace.shared.open(URL(fileURLWithPath: path))
+                }) {
+                    Image(systemName: "chart.bar.doc.horizontal") // Иконка отчетов/активности
+                        .foregroundColor(.secondary)
+                        .font(.system(size: 13, weight: .regular))
+                }
+                .buttonStyle(.plain)
+                // Полноценная всплывающая подсказка при наведении мыши
+                .help(locale.identifier.hasPrefix("ru") ? "Открыть Мониторинг системы" : "Open Activity Monitor")
+                .padding(.trailing, 4) // Небольшой аккуратный отступ между кнопками
+                
+                // Кнопка выхода (осталась на самом краю справа)
                 Button(action: {
                     NSApplication.shared.terminate(nil)
                 }) {
@@ -31,6 +47,8 @@ struct GraphPopoverView: View {
                 .buttonStyle(.plain)
                 .help(NSLocalizedString("menu_quit", comment: ""))
             }
+
+
             
             // Расчет шкалы Y на основе текущей секундной истории (30 секунд)
             let displayedPoints = monitor.statsHistory
